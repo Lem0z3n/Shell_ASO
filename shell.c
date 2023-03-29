@@ -8,7 +8,11 @@
 // Variables globales
 struct listaJobs listaJobs = {NULL, NULL};
 
-
+void handle_signal(int sig)
+{
+    //hacer algo con la signal
+    ;    
+}
 
 // Programa principal
 int main(int argc, char **argv) {
@@ -25,7 +29,9 @@ int main(int argc, char **argv) {
     }
 
     // Ignorar la señal SIGTTOU, capturar SIGINT, SIGQUIT...
-
+    signal(SIGTTOU, SIG_IGN);
+    signal(SIGINT, handle_signal);
+    signal(SIGQUIT, handle_signal);
 
     // Repetir
     while (1) {
