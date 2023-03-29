@@ -19,6 +19,7 @@ struct job {
     char *ordenBuf;		// cadenas con los argumentos
     int numProgs;		// numero de programas que integran el job (1)
     int runningProgs;		// programas que quedan por acabar (1 o 0)
+    int stoppedProgs;   //1 o 0  ctrl+z jobparado
     pid_t pgrp;			// ID de grupo de procesos en job
     struct ProgHijo *progs; 	// programas que integran el job (progs[0])
     struct job *sigue;		// enlace al siguiente job activo

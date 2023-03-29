@@ -240,7 +240,7 @@ void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
         (iterator->jobId == fg->jobId) ? sprintf(state, "Running") :  sprintf(state, "Stopped");
         printf("%i %s %s\n",iterator->jobId,state,iterator->texto);
     }
-
+    free(iterator);
 }
 
 void ord_wait(struct job *job,struct listaJobs *listaJobs, int esBg) {
@@ -307,17 +307,25 @@ void ord_fg(struct job *job,struct listaJobs *listaJobs, int esBg) {
             break;
         }
         // Cederle el terminal de control y actualizar listaJobs->fg
-
+        tcsetpgrp(0,job->progs[0].pid);
+        listaJobs->fg = job;
     }    
 }
 
 void ord_bg(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Pasar el job N a background y mandar SIGCONT
-
+    struct job * iterator = malloc(sizeof(struct job));
+    for(iterator = listaJobs->primero; iterator != NULL;
+        iterator = iterator->sigue){
        // Si existe y esta parado
-
+        if(atoi(job->progs[0].argv[1]) == iterator->jobId &&
+        iterator->stoppedProgs == 1){
           // Mandar señal SIGCONT y actualizar su estado
+          kill(iterator->progs[0].pid,SIGCONT);
+            //como actualizo el que?
+        }
+    }
 }
 
 
@@ -361,7 +369,10 @@ void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Duplicar proceso
     int pidHijo = fork();
-
+    if(pidHijo < 0){
+        perror("fork");
+        return;
+    }
        // Hijo
     if(pidHijo == 0){
    	  // Crear un nuevo grupo de procesos lo establezco a que pid?
@@ -369,9 +380,11 @@ void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
 	  // Ejecutar programa con los argumentos adecuados asumo que es un programa de bash.
       int falla = execvp(job->progs[0].argv[0],job->progs[0].argv);
       // Si la llamada a execvp retorna es que ha habido un error
-      if( falla == 0){
-        perror("falla execvp");
-        return;
+      if( falla < 0){
+        char * error = malloc(32);
+        sprintf(error, "orden incorrecta %s", job->ordenBuf);
+        perror(error);
+        exit(EXIT_FAILURE);
       }
     }
     // Padre 
@@ -380,6 +393,9 @@ void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
     // Crear un nuevo trabajo a partir de la informacion de job
     struct job * trabajo = malloc(sizeof(struct job));
     trabajo = job;
+    trabajo->jobId = 1;
+    trabajo->pgrp = setpgid(pidHijo,0);    
+    trabajo->progs[0].pid = pidHijo;
     // Insertar Job en la lista (el jobID se asigna de manera automatica)
 	insertaJob(listaJobs,trabajo,esBg);
     
@@ -391,9 +407,8 @@ void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Si no se ejecuta en background
 	// Cederle el terminal de control? y actualizar listaJobs->fg
+    tcsetpgrp(0,pidHijo);
     listaJobs->fg = trabajo;
-
-	  
 
       
 

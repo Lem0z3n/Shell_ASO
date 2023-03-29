@@ -2,6 +2,7 @@
 
 #include <signal.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include "shell.h"
 
@@ -37,8 +38,10 @@ int main(int argc, char **argv) {
     while (1) {
     
     // Si no hay job_en_foreground
-
+    if(listaJobs.fg == NULL){
 	    // Comprobar finalización de jobs
+
+        //compruebaJobs
 
 	    // Leer ordenes
 	    if (!otraOrden) {
@@ -50,23 +53,35 @@ int main(int argc, char **argv) {
 	    if (!analizaOrden(&otraOrden,&JobNuevo,&esBg) && JobNuevo.numProgs) {
 		    ejecutaOrden(&JobNuevo,&listaJobs,esBg);
         }
-
+    }
     // (Else) Si existe job en foreground
-
-	    // Esperar a que acabe el proceso que se encuentra en foreground
-
+        else{
+        // Esperar a que acabe el proceso que se encuentra en foreground
+        int status;
+        waitpid(listaJobs.fg->progs[0].pid,&status,NULL);
 	    // Recuperar el terminal de control
-
+        tcsetpgrp(0,getpid());
 	    // Si parada_desde_terminal
+        if(!WIFEXITED(status)){
+            // Informar de la parada
+            printf("parado programa %s\n",listaJobs.fg->texto);
 
-	        // Informar de la parada
+	        // Actualizar el estado del job y la lista como lo
+            listaJobs.fg->stoppedProgs=1;
+            insertaJob(&listaJobs,listaJobs.fg,0);
+        }
 
-	        // Actualizar el estado del job y la lista
+	    // (Else) si no	        
+        else{
+            // Eliminar el job de la lista
+            eliminaJob(&listaJobs,listaJobs.fg->progs[0].pid,0);
+        }
 
-	    // (Else) si no
 
-	        // Eliminar el job de la lista
+	        
 
+        }
+	    
 
 
 
