@@ -218,7 +218,7 @@ void ord_cd(struct job *job,struct listaJobs *listaJobs, int esBg) {
    // Cambiar al directorio especificado
    // o al directorio raiz ($HOME) si no hay argumento
     if(!job->progs->argv[1])
-        chdir("/"); 
+        chdir(getenv("HOME")); 
     else if(!opendir(job->progs->argv[1])){
         printf("No se encuentra directorio %s\n", job->ordenBuf);
         return;
@@ -258,7 +258,6 @@ void ord_wait(struct job *job,struct listaJobs *listaJobs, int esBg) {
 void ord_kill(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Mandar una señal KILL al job N
-    int found = 0;
     struct job * iterator = malloc(sizeof(struct job));
     for(iterator = listaJobs->primero; iterator != NULL;
     iterator = iterator->sigue){
@@ -271,7 +270,6 @@ void ord_kill(struct job *job,struct listaJobs *listaJobs, int esBg) {
 void ord_stop(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Mandar una señal STOP al job N
-     int found = 0;
     struct job * iterator = malloc(sizeof(struct job));
     for(iterator = listaJobs->primero; iterator != NULL;
     iterator = iterator->sigue){

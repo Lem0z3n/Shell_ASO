@@ -55,32 +55,27 @@ int main(int argc, char **argv) {
         }
     }
     // (Else) Si existe job en foreground
-        else{
+    else{
         // Esperar a que acabe el proceso que se encuentra en foreground
         int status;
         waitpid(listaJobs.fg->progs[0].pid,&status,NULL);
-	    // Recuperar el terminal de control
+        // Recuperar el terminal de control
         tcsetpgrp(0,getpid());
-	    // Si parada_desde_terminal
+        // Si parada_desde_terminal
         if(!WIFEXITED(status)){
             // Informar de la parada
             printf("parado programa %s\n",listaJobs.fg->texto);
-
-	        // Actualizar el estado del job y la lista como lo
+            // Actualizar el estado del job y la lista como lo
             listaJobs.fg->stoppedProgs=1;
             insertaJob(&listaJobs,listaJobs.fg,0);
         }
-
-	    // (Else) si no	        
+        // (Else) si no	        
         else{
             // Eliminar el job de la lista
-            eliminaJob(&listaJobs,listaJobs.fg->progs[0].pid,0);
-        }
+            eliminaJob(&listaJobs,listaJobs.fg->progs[0].pid,1);
+        }   
 
-
-	        
-
-        }
+    }
 	    
 
 

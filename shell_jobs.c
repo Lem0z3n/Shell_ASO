@@ -1,6 +1,7 @@
 /* shell_jobs.c -- rutinas relativas a jobs */ 
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "shell.h"
@@ -25,23 +26,25 @@ void eliminaJob(struct listaJobs *listaJobs, int pid, int esBg) {
     // Si el job esta en la lista 
     if (j) {
 	 
-	 // Si se trata de un job fg
-	 if (esBg)
-	    // Vaciar el puntero fg
-	    listaJobs->fg=NULL;
-	 // Sino
-	 else
-	    // Informar de la terminación
-	    fprintf(stdout,"[%d] Done\t%d\t%s\n",j->jobId,j->progs[0].pid,j->texto);   
-	    
-	 // Eliminar el job de la lista
-	 if (k)
-	    k->sigue=j->sigue;
-	 else
-	    listaJobs->primero=j->sigue;
-         
-	 // Liberar recursos
-	 liberaJob(j);free(j);
+        // Si se trata de un job fg
+        if (esBg)
+            // Vaciar el puntero fg
+            listaJobs->fg=NULL;
+        // Sino
+        else
+            // Informar de la terminación
+            fprintf(stdout,"[%d] Done\t%d\t%s\n",j->jobId,j->progs[0].pid,j->texto);   
+            
+        // Eliminar el job de la lista
+        if (k)
+            k->sigue=j->sigue;
+        else
+            listaJobs->primero=j->sigue;
+            
+        // Liberar recursos
+        liberaJob(j); 
+        //free(j); //da error este free. al volver del comando externo, porque?
+
 	 
     // Si el job no esta en la lista	    
     } else {
@@ -62,9 +65,12 @@ void insertaJob(struct listaJobs *listaJobs, struct job *job, int esBg)  {
     // Insertar
     if (k)
        k->sigue = job;
-    else
-       listaJobs->primero=job;
-    
+    else{
+        //si no hay más trabajos en la lista lo pongo el primero y el siguiente es NULL;
+        listaJobs->primero=job;
+        job->sigue = NULL; //no se si esto va a ser una buena idea.
+    }
+       
     // Actualizar jobId 
     job->jobId = jobId + 1;     
 }
