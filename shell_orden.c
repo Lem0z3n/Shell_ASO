@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/times.h>
+#include <dirent.h>
 #include "shell.h"
 
 extern char **environ;
@@ -184,7 +185,21 @@ int analizaOrden(char **ordenPtr, struct job *job, int *esBg) {
 void ord_exit(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
   // Finalizar todos los jobs
+  struct job * iterator = malloc(sizeof(struct job));
+  struct job * liberator = malloc(sizeof(struct job));
 
+  for(iterator = listaJobs->primero; iterator != NULL;
+    iterator = iterator->sigue){
+
+    if(liberator != NULL) //libera el job después de haber iterado.
+        free(liberator);
+    if(iterator->runningProgs > 0){ //hace kil a los procesosdel job
+        kill(iterator->progs->pid, SIGKILL);
+    }
+    liberator = iterator;
+  }
+  free(iterator);
+  waitpid(0,NULL,NULL);
   // Salir del programa
   exit(EXIT_SUCCESS);
 }
@@ -192,22 +207,47 @@ void ord_exit(struct job *job,struct listaJobs *listaJobs, int esBg) {
 void ord_pwd(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
    // Mostrar directorio actual
+   char* cwd = malloc(260);
+   getcwd(cwd,260);
+   printf("%s\n",cwd);
+   free(cwd);
 }
 
 void ord_cd(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
    // Cambiar al directorio especificado
    // o al directorio raiz ($HOME) si no hay argumento
+    if(!job->progs->argv[1])
+        chdir("/"); 
+    else if(!opendir(job->progs->argv[1])){
+        printf("No se encuentra directorio %s\n", job->ordenBuf);
+        return;
+    }
+
+    chdir(job->progs->argv[1]);
 }
 
 void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
    // Mostrar la lista de trabajos
+
+    struct job * iterator = malloc(sizeof(struct job));
+    struct job * fg = malloc(sizeof(struct job));
+    fg = listaJobs->fg;
+    char * state = malloc(8);
+    for(iterator = listaJobs->primero; iterator != NULL;
+    iterator = iterator->sigue){
+        (iterator->jobId == fg->jobId) ? sprintf(state, "Running") :  sprintf(state, "Stopped");
+        printf("%i %s %s\n",iterator->jobId,state,iterator->texto);
+    }
+
 }
 
 void ord_wait(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
    // Esperar la finalización del job N
+    int todos = 0;
+    (job->progs[0].argv[1] == NULL)? waitpid(todos,NULL,NULL) : waitpid(atoi(job->progs[0].argv[1]), NULL, NULL);
 
    /* Para permitir interrumpir la espera es necesario cederle el
       terminal de control y luego volver a recuperarlo (opcional) */
@@ -218,16 +258,30 @@ void ord_wait(struct job *job,struct listaJobs *listaJobs, int esBg) {
 void ord_kill(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Mandar una señal KILL al job N
-
+    int found = 0;
+    struct job * iterator = malloc(sizeof(struct job));
+    for(iterator = listaJobs->primero; iterator != NULL;
+    iterator = iterator->sigue){
        // Si existe mandar la señal SIGKILL
+       if(job->jobId == iterator->jobId)
+        kill(job->jobId,SIGKILL);
+    }   
 }
 
 void ord_stop(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Mandar una señal STOP al job N
-
-      // Si existe mandar la señal SIGSTOP y poner su estado a parado
-      // (runningProgs = 0)
+     int found = 0;
+    struct job * iterator = malloc(sizeof(struct job));
+    for(iterator = listaJobs->primero; iterator != NULL;
+    iterator = iterator->sigue){
+    // Si existe mandar la señal SIGSTOP y poner su estado a parado
+    // (runningProgs = 0)
+       if(job->jobId == iterator->jobId){
+            kill(job->jobId,SIGSTOP);
+            job->runningProgs = 0;
+       }
+    }
 
 }
 
@@ -235,11 +289,26 @@ void ord_fg(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Pasar el job N a foreground y mandar SIGCONT
 
-       // Si existe y esta parado
+    // Si existe y esta parado
+    struct job * iterator = malloc(sizeof(struct job));
+    for(iterator = listaJobs->primero; iterator != NULL;
+        iterator = iterator->sigue){
+        if(atoi(job->progs[0].argv[1]) == iterator->jobId)
+        {   
+            if(iterator->runningProgs != 0){
+                printf("este job no está parado\n");
+                break;
+            }
+            //cederle el terminal,
+            listaJobs->fg = job;
+            // Mandar señal SIGCONT y actualizar su estado
+            iterator->runningProgs = 1;
+            kill(iterator->progs[0].pid, SIGCONT);
+            break;
+        }
+        // Cederle el terminal de control y actualizar listaJobs->fg
 
-          // Cederle el terminal de control y actualizar listaJobs->fg
-
-          // Mandar señal SIGCONT y actualizar su estado
+    }    
 }
 
 void ord_bg(struct job *job,struct listaJobs *listaJobs, int esBg) {
@@ -275,40 +344,58 @@ void timeval_to_secs (struct timeval *tvp, time_t *s, int *ms)
 
 void ord_times(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
-    // Mostrar el tiempo acumulado de usuario y de sistema 
+    // Mostrar el tiempo acumulado de usuario y de sistema no entiendo que tiempo
 }
 
 void ord_date(struct job *job,struct listaJobs *listaJobs, int esBg) {
-
     // Mostrar la fecha actual
+    time_t t = time(NULL);
+    struct tm *tm = localtime(&t);
+    char s[64];
+    strftime(s, sizeof(s), "%c", tm);
+    printf("El dia de hoy es: %s\n", s);
 }
 
 // Ejecución de un comando externo
 void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Duplicar proceso
+    int pidHijo = fork();
 
        // Hijo
+    if(pidHijo == 0){
+   	  // Crear un nuevo grupo de procesos lo establezco a que pid?
+      
+	  // Ejecutar programa con los argumentos adecuados asumo que es un programa de bash.
+      int falla = execvp(job->progs[0].argv[0],job->progs[0].argv);
+      // Si la llamada a execvp retorna es que ha habido un error
+      if( falla == 0){
+        perror("falla execvp");
+        return;
+      }
+    }
+    // Padre 
+    //como hago un execvp no hay que comprobar nada
 
-     	  // Crear un nuevo grupo de procesos
+    // Crear un nuevo trabajo a partir de la informacion de job
+    struct job * trabajo = malloc(sizeof(struct job));
+    trabajo = job;
+    // Insertar Job en la lista (el jobID se asigna de manera automatica)
+	insertaJob(listaJobs,trabajo,esBg);
+    
+    //informar por pantalla de su ejecucion
+    if(esBg){
+        printf("[jobID] %i\n", trabajo->jobId);
+        return;
+    }
 
+    // Si no se ejecuta en background
+	// Cederle el terminal de control? y actualizar listaJobs->fg
+    listaJobs->fg = trabajo;
 
-	  // Ejecutar programa con los argumentos adecuados
+	  
 
-	  // Si la llamada a execvp retorna es que ha habido un error
-
-       // Padre
-
-    	  // Crear un nuevo trabajo a partir de la informacion de job
-
-     	  // Insertar Job en la lista (el jobID se asigna de manera automatica)
-
-     	  // Si no se ejecuta en background
-
-
-	     // Cederle el terminal de control y actualizar listaJobs->fg
-
-	  // De lo contrario, informar por pantalla de su ejecucion
+      
 
 }
 
@@ -317,7 +404,7 @@ void ejecutaOrden(struct job *job,struct listaJobs *listaJobs, int esBg) {
     char *orden = job->progs[0].argv[0];
 
     // Si es orden interna ejecutar la acción apropiada
-    if      (!strcmp("exit",orden))  ord_exit(job,listaJobs,esBg);
+    if      (!(strcmp("exit",orden) && strcmp("e",orden)))  ord_exit(job,listaJobs,esBg);
     else if (!strcmp("pwd",orden))   ord_pwd(job,listaJobs,esBg);
     else if (!strcmp("cd",orden))    ord_cd(job,listaJobs,esBg);
     else if (!strcmp("jobs",orden))  ord_jobs(job,listaJobs,esBg);
