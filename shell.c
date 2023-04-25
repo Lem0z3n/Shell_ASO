@@ -9,12 +9,20 @@
 // Variables globales
 struct listaJobs listaJobs = {NULL, NULL};
 
-void handle_signal(int sig)
+void handle_int(int sig)
 {
-    //hacer algo con la signal
+    if(listaJobs.fg != NULL){
+        kill(listaJobs.fg->progs[0].pid, SIGINT);
+    }
     ;    
 }
-
+void handle_quit(int sig)
+{
+    if(listaJobs.fg != NULL){
+        kill(listaJobs.fg->progs[0].pid, SIGQUIT);
+    }
+    ;    
+}
 // Programa principal
 int main(int argc, char **argv) {
 
@@ -31,8 +39,8 @@ int main(int argc, char **argv) {
 
     // Ignorar la señal SIGTTOU, capturar SIGINT, SIGQUIT...
     signal(SIGTTOU, SIG_IGN);
-    signal(SIGINT, handle_signal);
-    signal(SIGQUIT, handle_signal);
+    signal(SIGINT, handle_int);
+    signal(SIGQUIT, handle_quit);
 
     // Repetir
     while (1) {
@@ -42,7 +50,7 @@ int main(int argc, char **argv) {
 	    // Comprobar finalización de jobs
 
         //compruebaJobs
-
+        compruebaJobs(&listaJobs);
 	    // Leer ordenes
 	    if (!otraOrden) {
             if (leeOrden(stdin, orden)) break;

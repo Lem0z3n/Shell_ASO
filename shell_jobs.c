@@ -68,7 +68,6 @@ void insertaJob(struct listaJobs *listaJobs, struct job *job, int esBg)  {
     else{
         //si no hay más trabajos en la lista lo pongo el primero y el siguiente es NULL;
         listaJobs->primero=job;
-        job->sigue = NULL; //no se si esto va a ser una buena idea.
     }
        
     // Actualizar jobId 

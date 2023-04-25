@@ -219,12 +219,10 @@ void ord_cd(struct job *job,struct listaJobs *listaJobs, int esBg) {
    // o al directorio raiz ($HOME) si no hay argumento
     if(!job->progs->argv[1])
         chdir(getenv("HOME")); 
-    else if(!opendir(job->progs->argv[1])){
+    else if(chdir(job->progs->argv[1]) != 0){
         printf("No se encuentra directorio %s\n", job->ordenBuf);
         return;
     }
-
-    chdir(job->progs->argv[1]);
 }
 
 void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
@@ -232,12 +230,12 @@ void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
    // Mostrar la lista de trabajos
 
     struct job * iterator = malloc(sizeof(struct job));
-    struct job * fg = malloc(sizeof(struct job));
-    fg = listaJobs->fg;
+    int idFg = (listaJobs->fg!= NULL)? listaJobs->fg->jobId: 0;
     char * state = malloc(8);
+
     for(iterator = listaJobs->primero; iterator != NULL;
     iterator = iterator->sigue){
-        (iterator->jobId == fg->jobId) ? sprintf(state, "Running") :  sprintf(state, "Stopped");
+        (iterator->jobId == idFg) ? sprintf(state, "Running") :  sprintf(state, "Stopped");
         printf("%i %s %s\n",iterator->jobId,state,iterator->texto);
     }
     free(iterator);
@@ -246,8 +244,8 @@ void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
 void ord_wait(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
    // Esperar la finalización del job N
-    int todos = 0;
-    (job->progs[0].argv[1] == NULL)? waitpid(todos,NULL,NULL) : waitpid(atoi(job->progs[0].argv[1]), NULL, NULL);
+    int todos = 0, status;
+    (job->progs[0].argv[1] == NULL)? waitpid(todos,&status,NULL) : waitpid(atoi(job->progs[0].argv[1]), &status, NULL);
 
    /* Para permitir interrumpir la espera es necesario cederle el
       terminal de control y luego volver a recuperarlo (opcional) */
@@ -394,12 +392,13 @@ void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
     trabajo->jobId = 1;
     trabajo->pgrp = setpgid(pidHijo,0);    
     trabajo->progs[0].pid = pidHijo;
+    trabajo->sigue = NULL;
     // Insertar Job en la lista (el jobID se asigna de manera automatica)
 	insertaJob(listaJobs,trabajo,esBg);
     
     //informar por pantalla de su ejecucion
     if(esBg){
-        printf("[jobID] %i\n", trabajo->jobId);
+        printf("[jobID] %i %s\n", trabajo->jobId, trabajo->texto);
         return;
     }
 
