@@ -12,16 +12,27 @@ struct listaJobs listaJobs = {NULL, NULL};
 void handle_int(int sig)
 {
     if(listaJobs.fg != NULL){
-        kill(listaJobs.fg->progs[0].pid, SIGINT);
+        kill(listaJobs.fg->pgrp, SIGINT);
     }
     ;    
 }
 void handle_quit(int sig)
 {
     if(listaJobs.fg != NULL){
-        kill(listaJobs.fg->progs[0].pid, SIGQUIT);
+        kill(listaJobs.fg->pgrp, SIGQUIT);
+        tcsetpgrp(0,getpid());
     }
     ;    
+}
+void handle_sigchild(int signum)
+{
+    int status;
+    pid_t pid;
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        eliminaJob(&listaJobs,pid,0);
+        
+    }
+    ; 
 }
 // Programa principal
 int main(int argc, char **argv) {
@@ -41,6 +52,7 @@ int main(int argc, char **argv) {
     signal(SIGTTOU, SIG_IGN);
     signal(SIGINT, handle_int);
     signal(SIGQUIT, handle_quit);
+    signal(SIGCHLD, handle_sigchild); 
 
     // Repetir
     while (1) {
@@ -50,7 +62,7 @@ int main(int argc, char **argv) {
 	    // Comprobar finalización de jobs
 
         //compruebaJobs
-        compruebaJobs(&listaJobs);
+        //compruebaJobs(&listaJobs);
 	    // Leer ordenes
 	    if (!otraOrden) {
             if (leeOrden(stdin, orden)) break;

@@ -276,8 +276,9 @@ void ord_stop(struct job *job,struct listaJobs *listaJobs, int esBg) {
     // Si existe mandar la señal SIGSTOP y poner su estado a parado
     // (runningProgs = 0)
        if(atoi(job->progs[0].argv[1]) == iterator->jobId){
-            kill(job->jobId,SIGSTOP);
-            job->runningProgs = 0;
+            kill(iterator->progs[0].pid, SIGSTOP);
+            iterator->runningProgs = 0;
+            iterator->stoppedProgs = 1;
        }
     }
 
@@ -293,20 +294,20 @@ void ord_fg(struct job *job,struct listaJobs *listaJobs, int esBg) {
         iterator = iterator->sigue){
         if(atoi(job->progs[0].argv[1]) == iterator->jobId)
         {   
-            if(iterator->runningProgs != 0){
+            if(iterator->stoppedProgs != 1){
                 printf("este job no está parado\n");
                 break;
             }
             //cederle el terminal,
-            listaJobs->fg = job;
             // Mandar señal SIGCONT y actualizar su estado
             iterator->runningProgs = 1;
+            iterator->stoppedProgs = 0;
             kill(iterator->progs[0].pid, SIGCONT);
             break;
         }
         // Cederle el terminal de control y actualizar listaJobs->fg
-        tcsetpgrp(0,job->progs[0].pid);
         listaJobs->fg = job;
+        tcsetpgrp(0,job->progs[0].pid);
     }    
 }
 
@@ -321,7 +322,7 @@ void ord_bg(struct job *job,struct listaJobs *listaJobs, int esBg) {
         iterator->stoppedProgs == 1){
           // Mandar señal SIGCONT y actualizar su estado
           kill(iterator->progs[0].pid,SIGCONT);
-            //como actualizo el que?
+          iterator->stoppedProgs = 0;
         }
     }
 }
