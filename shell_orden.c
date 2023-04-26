@@ -228,7 +228,8 @@ void ord_cd(struct job *job,struct listaJobs *listaJobs, int esBg) {
 void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
    // Mostrar la lista de trabajos
-
+   /*if(job->sigue != NULL && job->jobId == job->sigue->jobId) //TRATO A PIÑON UN BUG QUE CREO QUE NACE DE EL ANALIZA ORDEN.
+        job->sigue = NULL;*/
     struct job * iterator = malloc(sizeof(struct job));
     int idFg = (listaJobs->fg!= NULL)? listaJobs->fg->jobId: 0;
     char * state = malloc(8);
@@ -236,8 +237,9 @@ void ord_jobs(struct job *job,struct listaJobs *listaJobs, int esBg) {
     for(iterator = listaJobs->primero; iterator != NULL;
     iterator = iterator->sigue){
         (iterator->jobId == idFg) ? sprintf(state, "Running") :  sprintf(state, "Stopped");
-        printf("%i %s %s\n",iterator->jobId,state,iterator->texto);
+        printf("%i %s %s\n",iterator->jobId,state,iterator->ordenBuf);
     }
+    //eliminaJob(listaJobs, job->progs[0].pid, esBg);
     free(iterator);
 }
 
@@ -388,22 +390,26 @@ void ord_externa(struct job *job,struct listaJobs *listaJobs, int esBg) {
 
     // Crear un nuevo trabajo a partir de la informacion de job
     struct job * trabajo = malloc(sizeof(struct job));
-    trabajo = job;
-    trabajo->jobId = 1;
+    trabajo->texto = job->texto;
+    trabajo->ordenBuf = job->ordenBuf;
+    trabajo->numProgs = job->numProgs;
+    trabajo->runningProgs = job->runningProgs;
     trabajo->pgrp = setpgid(pidHijo,0);    
+    trabajo->progs = job->progs;
     trabajo->progs[0].pid = pidHijo;
     trabajo->sigue = NULL;
+    trabajo->jobId = NULL;
     // Insertar Job en la lista (el jobID se asigna de manera automatica)
 	insertaJob(listaJobs,trabajo,esBg);
     
     //informar por pantalla de su ejecucion
     if(esBg){
-        printf("[jobID] %i %s\n", trabajo->jobId, trabajo->texto);
+        printf("[%i] %s\n", trabajo->jobId, trabajo->ordenBuf);
         return;
     }
 
     // Si no se ejecuta en background
-	// Cederle el terminal de control? y actualizar listaJobs->fg
+	// Cederle el terminal de control y actualizar listaJobs->fg
     tcsetpgrp(0,pidHijo);
     listaJobs->fg = trabajo;
 
