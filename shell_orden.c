@@ -262,9 +262,8 @@ void ord_kill(struct job *job,struct listaJobs *listaJobs, int esBg) {
     for(iterator = listaJobs->primero; iterator != NULL;
     iterator = iterator->sigue){
        // Si existe mandar la señal SIGKILL
-       if(atoi(job->progs[0].argv[1]) == iterator->jobId){
+       if(atoi(job->progs[0].argv[1]) == iterator->jobId)
         kill(iterator->progs[0].pid,SIGKILL);
-       }
     }   
 }
 
@@ -276,7 +275,7 @@ void ord_stop(struct job *job,struct listaJobs *listaJobs, int esBg) {
     iterator = iterator->sigue){
     // Si existe mandar la señal SIGSTOP y poner su estado a parado
     // (runningProgs = 0)
-       if(job->jobId == iterator->jobId){
+       if(atoi(job->progs[0].argv[1]) == iterator->jobId){
             kill(job->jobId,SIGSTOP);
             job->runningProgs = 0;
        }
