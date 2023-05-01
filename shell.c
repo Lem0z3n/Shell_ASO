@@ -12,8 +12,8 @@ struct listaJobs listaJobs = {NULL, NULL};
 void handle_int(int sig)
 {
     if(listaJobs.fg != NULL){
-        tcsetpgrp(0,getpid());
         kill(listaJobs.fg->pgrp, SIGINT);
+        tcsetpgrp(0,getpid());
     }
 }
 void handle_quit(int sig)
@@ -29,6 +29,7 @@ void handle_sigchild(int signum)
     pid_t pid;
     while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
         eliminaJob(&listaJobs,pid,0);
+        tcsetpgrp(0, getpid());
     }
 }
 // Programa principal
@@ -74,23 +75,24 @@ int main(int argc, char **argv) {
         else{
             // Esperar a que acabe el proceso que se encuentra en foreground
             int status;
-            waitpid(listaJobs.fg->progs[0].pid,&status,NULL);
+
+            waitpid(listaJobs.fg->progs[0].pid, &status, NULL);
+
+            if (WIFSTOPPED(status)) {
+                // El proceso ha sido parado
+                printf("parado programa %s\n", listaJobs.fg->texto);
+                listaJobs.fg->stoppedProgs = 1;
+                insertaJob(&listaJobs, listaJobs.fg, 0);
+            } else if (WIFSIGNALED(status)) {
+                // El proceso ha recibido una señal
+                printf("terminado programa %s\n", listaJobs.fg->texto);
+                eliminaJob(&listaJobs, listaJobs.fg->progs[0].pid, 1);
+            } else if (WIFEXITED(status)) {
+                // El proceso ha terminado
+                eliminaJob(&listaJobs, listaJobs.fg->progs[0].pid, 1);
+            }
             // Recuperar el terminal de control
             tcsetpgrp(0,getpid());
-            // Si parada_desde_terminal
-            if(!WIFEXITED(status)){
-                // Informar de la parada
-                printf("parado programa %s\n",listaJobs.fg->texto);
-                // Actualizar el estado del job y la lista como lo
-                listaJobs.fg->stoppedProgs=1;
-                insertaJob(&listaJobs,listaJobs.fg,0);
-            }
-            // (Else) si no	        
-            else{
-                // Eliminar el job de la lista
-                eliminaJob(&listaJobs,listaJobs.fg->progs[0].pid,1);
-            }   
-
         }
     }
 
