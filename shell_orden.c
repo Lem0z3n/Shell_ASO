@@ -10,6 +10,7 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/resource.h>
 #include <sys/times.h>
 #include <dirent.h>
 #include "shell.h"
@@ -152,8 +153,8 @@ int analizaOrden(char **ordenPtr, struct job *job, int *esBg) {
     // Chequeo de seguridad
     if (!argc) {
         // Si no existen argumentos (orden vacia) liberar la memoria y
-	// preparar ordenPtr para continuar el procesamiento de la linea
-	liberaJob(job);
+	    // preparar ordenPtr para continuar el procesamiento de la linea
+	    liberaJob(job);
     	*ordenPtr = retornoOrden;
         return 1;
     }
@@ -292,8 +293,8 @@ void ord_fg(struct job *job,struct listaJobs *listaJobs, int esBg) {
     struct job * iterator = malloc(sizeof(struct job));
     for(iterator = listaJobs->primero; iterator != NULL;
         iterator = iterator->sigue){
-        if(atoi(job->progs[0].argv[1]) == iterator->jobId)
-        {   
+            
+        if(atoi(job->progs[0].argv[1]) == iterator->jobId) {   
             if(iterator->stoppedProgs != 1){
                 printf("este job no está parado\n");
                 break;
@@ -350,8 +351,13 @@ void timeval_to_secs (struct timeval *tvp, time_t *s, int *ms)
 }
 
 void ord_times(struct job *job,struct listaJobs *listaJobs, int esBg) {
+    struct rusage usage;
 
-    // Mostrar el tiempo acumulado de usuario y de sistema no entiendo que tiempo
+    getrusage(RUSAGE_SELF, &usage);
+    getrusage(RUSAGE_CHILDREN, &usage);
+    
+    printf("User time used: %ld.%06ld seconds\n", usage.ru_utime.tv_sec, usage.ru_utime.tv_usec);
+    printf("System time used: %ld.%06ld seconds\n", usage.ru_stime.tv_sec, usage.ru_stime.tv_usec);
 }
 
 void ord_date(struct job *job,struct listaJobs *listaJobs, int esBg) {
